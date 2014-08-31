@@ -22,37 +22,41 @@ import (
 	"testing"
 )
 
-type TestSelectWidgetData struct {
-	Option string
+// WidgetTest defines a test for testWidget
+type WidgetTest struct {
+	// Widget is the widget to test
+	Widget Widget
+	// AppStruct is the appstruct which will be filled
+	AppStruct interface{}
+	// UrlValue is the submitted value
+	URLValue string
+	// FilledValue is the expected value filled into the appstruct
+	FilledValue interface{}
+	// RenderData is the expected value of the WidgetRenderData Data field
+	RenderData interface{}
 }
 
-func TestSelectWidget(t *testing.T) {
-	data := TestSelectWidgetData{}
-	form := NewForm(&data)
-	options := []SelectOption{
-		SelectOption{"foo", "Foo", true},
-		SelectOption{"bar", "Bar", false},
-	}
-	form.AddWidget(&SelectWidget{Options: options},
-		"Option", "Option", "Choose one")
+// testWidget performs common tests on the given widget
+func testWidget(t *testing.T, test *WidgetTest) {
+	form := NewForm(test.AppStruct)
+	form.AddWidget(test.Widget, "Id", "Label", "Description")
 	urlValues := url.Values{
-		"Option": []string{"bar"},
+		"Id": []string{test.URLValue},
 	}
 	form.Fill(urlValues)
-	if data.Option != "bar" {
-		t.Errorf("Option is %v, should be %v", data.Option, "bar")
+	if !reflect.DeepEqual(test.FilledValue,
+		reflect.ValueOf(test.AppStruct).Elem().FieldByName("Id").Interface()) {
+		t.Errorf("AppStruct field is\n%v\nshould be \n%v", test.AppStruct,
+			test.FilledValue)
 	}
 	renderData := form.RenderData()
 	expected := WidgetRenderData{
 		WidgetBase: WidgetBase{
-			Id:          "Option",
-			Label:       "Option",
-			Description: "Choose one",
+			Id:          "Id",
+			Label:       "Label",
+			Description: "Description",
 		},
-		Data: []SelectOption{
-			SelectOption{"foo", "Foo", false},
-			SelectOption{"bar", "Bar", true},
-		},
+		Data: test.RenderData,
 	}
 	if len(renderData.Errors) > 0 {
 		t.Errorf("RenderData contains general errors: %v", renderData.Errors)
@@ -64,44 +68,27 @@ func TestSelectWidget(t *testing.T) {
 	}
 }
 
-/*
-
-// testWidget performs common test on the given widget
-//
-// data is the form data struct.
-// input is the rendered field with the given urlValue filled into the
-// data struct.
-// zeroInput is the rendered field with zero valued data struct field.
-// value is the expected value in the data struct after filling the
-// given input into it.
-// urlValue is a HTTP parameter value to be filled into the data struct.
-func testWidget(t *testing.T, widget Widget, data interface{}, input,
-	zeroInput string, value interface{}, urlValue string) {
-	form := NewForm(data, []Field{Field{"ID", "T", "H", nil, widget}})
-	renderData := form.RenderData()
-	if renderData.Fields[0].Input != template.HTML(zeroInput) {
-		t.Errorf("Input field for zero value is\n%v\nshould be \n%v",
-			renderData.Fields[0].Input, zeroInput)
-	}
-	vals := url.Values{"ID": []string{urlValue}}
-	form.Fill(vals)
-	renderData = form.RenderData()
-	if renderData.Fields[0].Input != template.HTML(input) {
-		t.Errorf("Input field is\n%v\nshould be \n%v",
-			renderData.Fields[0].Input, input)
-	}
-	if !reflect.DeepEqual(value,
-		reflect.ValueOf(data).Elem().FieldByName("ID").Interface()) {
-		t.Errorf("Data is\n%v\nshould be \n%v", data, value)
-	}
-	form.Fill(url.Values{})
-	renderData = form.RenderData()
-	if renderData.Fields[0].Input != template.HTML(zeroInput) {
-		t.Errorf("Input field for empty value is\n%v\nshould be \n%v",
-			renderData.Fields[0].Input, zeroInput)
-	}
+type TestSelectWidgetData struct {
+	Id string
 }
 
+func TestSelectWidget(t *testing.T) {
+	testWidget(t, &WidgetTest{
+		Widget: &SelectWidget{Options: []SelectOption{
+			SelectOption{"foo", "Foo", true},
+			SelectOption{"bar", "Bar", false},
+		}},
+		AppStruct:   &TestSelectWidgetData{},
+		URLValue:    "bar",
+		FilledValue: "bar",
+		RenderData: []SelectOption{
+			SelectOption{"foo", "Foo", false},
+			SelectOption{"bar", "Bar", true},
+		},
+	})
+}
+
+/*
 
 func TestSelectWidget(t *testing.T) {
 	widget := SelectWidget{[]Option{
