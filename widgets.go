@@ -54,8 +54,6 @@ func (w *WidgetBase) Base() *WidgetBase {
 }
 
 type TextWidget struct{ WidgetBase }
-type IntegerWidget struct{ WidgetBase }
-type BoolWidget struct{ WidgetBase }
 
 func (w *TextWidget) Fill(values url.Values) bool {
 	value := ""
@@ -70,6 +68,8 @@ func (w *TextWidget) Fill(values url.Values) bool {
 	return true
 }
 
+type BoolWidget struct{ WidgetBase }
+
 func (w *BoolWidget) Fill(values url.Values) bool {
 	v, err := strconv.ParseBool(values[w.Id][0])
 	if err != nil {
@@ -78,6 +78,8 @@ func (w *BoolWidget) Fill(values url.Values) bool {
 	w.Form.findNestedField(w.Id, v)
 	return true
 }
+
+type IntegerWidget struct{ WidgetBase }
 
 func (w *IntegerWidget) Fill(values url.Values) bool {
 	v, err := strconv.ParseInt(values[w.Id][0], 0, 0)
