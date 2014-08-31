@@ -16,6 +16,54 @@
 
 package htmlwidgets
 
+import (
+	"net/url"
+	"reflect"
+	"testing"
+)
+
+type TestSelectWidgetData struct {
+	Option string
+}
+
+func TestSelectWidget(t *testing.T) {
+	data := TestSelectWidgetData{}
+	form := NewForm(&data)
+	options := []SelectOption{
+		SelectOption{"foo", "Foo", true},
+		SelectOption{"bar", "Bar", false},
+	}
+	form.AddWidget(&SelectWidget{Options: options},
+		"Option", "Option", "Choose one", "")
+	urlValues := url.Values{
+		"Option": []string{"bar"},
+	}
+	form.Fill(urlValues)
+	if data.Option != "bar" {
+		t.Errorf("Option is %v, should be %v", data.Option, "bar")
+	}
+	renderData := form.RenderData()
+	expected := WidgetRenderData{
+		WidgetBase: WidgetBase{
+			Id:          "Option",
+			Label:       "Option",
+			Description: "Choose one",
+		},
+		Data: []SelectOption{
+			SelectOption{"foo", "Foo", false},
+			SelectOption{"bar", "Bar", true},
+		},
+	}
+	if len(renderData.Errors) > 0 {
+		t.Errorf("RenderData contains general errors: %v", renderData.Errors)
+	}
+	renderData.Widgets[0].WidgetBase.Form = nil
+	if !reflect.DeepEqual(renderData.Widgets[0], expected) {
+		t.Errorf("RenderData for Widget '%v' =\n%#v,\nexpected\n%#v",
+			expected.Id, renderData.Widgets[0], expected)
+	}
+}
+
 /*
 
 // testWidget performs common test on the given widget

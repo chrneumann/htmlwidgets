@@ -89,3 +89,35 @@ func (w *IntegerWidget) Fill(values url.Values) bool {
 	w.Form.findNestedField(w.Id, int(v))
 	return true
 }
+
+// SelectOption is an option to choose from in a SelectWidget
+type SelectOption struct {
+	Value, Description string
+	Selected           bool
+}
+
+// SelectWidget allows to choose one from multiple options.
+type SelectWidget struct {
+	WidgetBase
+	Options []SelectOption
+}
+
+func (w *SelectWidget) Fill(values url.Values) bool {
+	value := w.Options[0].Value
+	if len(values[w.Id]) == 1 {
+		for i, option := range w.Options {
+			if option.Value == values[w.Id][0] {
+				value = option.Value
+				w.Options[i].Selected = true
+			} else {
+				w.Options[i].Selected = false
+			}
+		}
+	}
+	w.Form.findNestedField(w.Id, value)
+	return true
+}
+
+func (w SelectWidget) GetRenderData() WidgetRenderData {
+	return WidgetRenderData{WidgetBase: w.WidgetBase, Data: w.Options}
+}
