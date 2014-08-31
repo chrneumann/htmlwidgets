@@ -57,7 +57,7 @@ func TestSelectWidget(t *testing.T) {
 	if len(renderData.Errors) > 0 {
 		t.Errorf("RenderData contains general errors: %v", renderData.Errors)
 	}
-	renderData.Widgets[0].WidgetBase.Form = nil
+	renderData.Widgets[0].WidgetBase.form = nil
 	if !reflect.DeepEqual(renderData.Widgets[0], expected) {
 		t.Errorf("RenderData for Widget '%v' =\n%#v,\nexpected\n%#v",
 			expected.Id, renderData.Widgets[0], expected)

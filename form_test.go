@@ -95,7 +95,7 @@ func TestRender(t *testing.T) {
 		if len(renderData.Errors) > 0 {
 			t.Errorf("RenderData contains general errors: %v", renderData.Errors)
 		}
-		renderData.Widgets[i].WidgetBase.Form = nil
+		renderData.Widgets[i].WidgetBase.form = nil
 		if !reflect.DeepEqual(renderData.Widgets[i], test) {
 			t.Errorf("RenderData for Widget '%v' =\n%#v,\nexpected\n%#v",
 				test.Id, renderData.Widgets[i], test)

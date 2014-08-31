@@ -41,11 +41,11 @@ type WidgetBase struct {
 	Id, Label, Description, Required string
 	// Errors contains any validation errors.
 	Errors []string
-	Form   *Form
+	form   *Form
 }
 
 func (w WidgetBase) GetRenderData() WidgetRenderData {
-	value, _ := w.Form.getNestedField(w.Id)
+	value, _ := w.form.getNestedField(w.Id)
 	return WidgetRenderData{WidgetBase: w, Data: value.Interface()}
 }
 
@@ -60,7 +60,7 @@ func (w *TextWidget) Fill(values url.Values) bool {
 	if len(values[w.Id]) == 1 {
 		value = values[w.Id][0]
 	}
-	w.Form.findNestedField(w.Id, value)
+	w.form.findNestedField(w.Id, value)
 	if len(w.Required) > 0 && len(value) == 0 {
 		w.Errors = append(w.Errors, w.Required)
 		return false
@@ -75,7 +75,7 @@ func (w *BoolWidget) Fill(values url.Values) bool {
 	if err != nil {
 		return false
 	}
-	w.Form.findNestedField(w.Id, v)
+	w.form.findNestedField(w.Id, v)
 	return true
 }
 
@@ -86,7 +86,7 @@ func (w *IntegerWidget) Fill(values url.Values) bool {
 	if err != nil {
 		return false
 	}
-	w.Form.findNestedField(w.Id, int(v))
+	w.form.findNestedField(w.Id, int(v))
 	return true
 }
 
@@ -114,7 +114,7 @@ func (w *SelectWidget) Fill(values url.Values) bool {
 			}
 		}
 	}
-	w.Form.findNestedField(w.Id, value)
+	w.form.findNestedField(w.Id, value)
 	return true
 }
 
