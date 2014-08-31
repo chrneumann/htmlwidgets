@@ -17,8 +17,8 @@
 package htmlwidgets
 
 import (
-	"log"
 	"net/url"
+	"strconv"
 )
 
 // WidgetRenderData contains the data needed for widget rendering.
@@ -49,16 +49,33 @@ func (w WidgetBase) GetRenderData() WidgetRenderData {
 	return WidgetRenderData{WidgetBase: w, Data: value.Interface()}
 }
 
-func (w *WidgetBase) Fill(values url.Values) bool {
-	log.Println(values[w.Id])
-	w.Form.setNestedField(w.Id, values[w.Id][0])
-	return true
-}
-
 func (w *WidgetBase) Base() *WidgetBase {
 	return w
 }
 
 type TextWidget struct{ WidgetBase }
 type IntegerWidget struct{ WidgetBase }
-type CheckboxWidget struct{ WidgetBase }
+type BoolWidget struct{ WidgetBase }
+
+func (w *TextWidget) Fill(values url.Values) bool {
+	w.Form.findNestedField(w.Id, values[w.Id][0])
+	return true
+}
+
+func (w *BoolWidget) Fill(values url.Values) bool {
+	v, err := strconv.ParseBool(values[w.Id][0])
+	if err != nil {
+		return false
+	}
+	w.Form.findNestedField(w.Id, v)
+	return true
+}
+
+func (w *IntegerWidget) Fill(values url.Values) bool {
+	v, err := strconv.ParseInt(values[w.Id][0], 0, 0)
+	if err != nil {
+		return false
+	}
+	w.Form.findNestedField(w.Id, int(v))
+	return true
+}

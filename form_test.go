@@ -41,7 +41,7 @@ func TestRender(t *testing.T) {
 	form.AddWidget(new(TextWidget), "Title", "Title", "Your title")
 	//TextWidget{Id: "Name", Label: "Name", Description: "Your full name"},
 	form.AddWidget(new(IntegerWidget), "Age", "Age", "Years since your birth")
-	form.AddWidget(new(CheckboxWidget), "Extra.ExtraField", "Alive", "Still alive?")
+	form.AddWidget(new(BoolWidget), "Extra.ExtraField", "Alive", "Still alive?")
 
 	urlValues := url.Values{
 		"Title": []string{""},
@@ -88,7 +88,7 @@ func TestRender(t *testing.T) {
 				Label:       "Alive",
 				Description: "Still alive?",
 			},
-			Data: "true",
+			Data: true,
 		},
 	}
 	for i, test := range fieldTests {

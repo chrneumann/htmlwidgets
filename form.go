@@ -17,13 +17,10 @@
 package htmlwidgets
 
 import (
-	"encoding"
 	"fmt"
 	"html/template"
-	"log"
 	"net/url"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
@@ -174,50 +171,6 @@ func (f *Form) findNestedField(field string, setValue interface{}) (reflect.Valu
 		value = value.Elem()
 	}
 	return value, nil
-}
-
-// stringToValue converts the given source string to a value of the
-// given target type.
-func stringToValue(src string, target reflect.Type) interface{} {
-	if target.Implements(reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()) {
-		log.Println("TextUnmarshaler", src, target)
-		if target.Kind() == reflect.Ptr {
-			target = target.Elem()
-		}
-		val := reflect.New(target)
-		val.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(src))
-		return val.Elem().Interface()
-	}
-	if target.Kind() == reflect.Ptr {
-		target = target.Elem()
-	}
-	switch target.Kind() {
-	case reflect.String:
-		return src
-	case reflect.Int:
-		v, err := strconv.ParseInt(src, 0, 0)
-		if err != nil {
-			return 0
-		}
-		return int(v)
-	case reflect.Bool:
-		v, err := strconv.ParseBool(src)
-		if err != nil {
-			return false
-		}
-		return v
-	default:
-		panic(fmt.Sprintln("form: Unknown widget kind", target.Kind()))
-	}
-	return nil
-}
-
-// setNestedField searches for the given nested field in the given data
-func (f *Form) setNestedField(field string, value string) {
-	val, err := f.findNestedField(field, nil)
-	if err == nil {
-		f.findNestedField(field, stringToValue(value, val.Type()))
-	}
 }
 
 // Fill fills the form data with the given values and validates the form.
