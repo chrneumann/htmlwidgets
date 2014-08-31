@@ -34,6 +34,8 @@ type WidgetTest struct {
 	FilledValue interface{}
 	// RenderData is the expected value of the WidgetRenderData Data field
 	RenderData interface{}
+	// Error is the expected error if any
+	Error string
 }
 
 // testWidget performs common tests on the given widget
@@ -50,11 +52,16 @@ func testWidget(t *testing.T, test *WidgetTest) {
 			test.FilledValue)
 	}
 	renderData := form.RenderData()
+	var errors []string
+	if len(test.Error) > 0 {
+		errors = append(errors, test.Error)
+	}
 	expected := WidgetRenderData{
 		WidgetBase: WidgetBase{
 			Id:          "Id",
 			Label:       "Label",
 			Description: "Description",
+			Errors:      errors,
 		},
 		Data: test.RenderData,
 	}
@@ -99,6 +106,43 @@ func TestHiddenWidget(t *testing.T) {
 		URLValue:    "foo",
 		FilledValue: "foo",
 		RenderData:  "foo",
+	})
+}
+
+type TestTextWidgetData struct {
+	Id string
+}
+
+func TestTextWidget(t *testing.T) {
+	testWidget(t, &WidgetTest{
+		Widget:      new(TextWidget),
+		AppStruct:   &TestTextWidgetData{},
+		URLValue:    "foo",
+		FilledValue: "foo",
+		RenderData:  "foo",
+	})
+	testWidget(t, &WidgetTest{
+		Widget:      &TextWidget{MinLength: 5, ValidationError: ">=5"},
+		AppStruct:   &TestTextWidgetData{},
+		URLValue:    "foo",
+		FilledValue: "foo",
+		RenderData:  "foo",
+		Error:       ">=5",
+	})
+	testWidget(t, &WidgetTest{
+		Widget:      &TextWidget{Regexp: `^\w{2}$`, ValidationError: "exactly 2"},
+		AppStruct:   &TestTextWidgetData{},
+		URLValue:    "fo",
+		FilledValue: "fo",
+		RenderData:  "fo",
+	})
+	testWidget(t, &WidgetTest{
+		Widget:      &TextWidget{Regexp: `^\w{2}$`, ValidationError: "exactly 2"},
+		AppStruct:   &TestTextWidgetData{},
+		URLValue:    "foo",
+		FilledValue: "foo",
+		RenderData:  "foo",
+		Error:       "exactly 2",
 	})
 }
 

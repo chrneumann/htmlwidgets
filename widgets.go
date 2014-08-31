@@ -18,6 +18,7 @@ package htmlwidgets
 
 import (
 	"net/url"
+	"regexp"
 	"strconv"
 )
 
@@ -56,6 +57,7 @@ func (w *WidgetBase) Base() *WidgetBase {
 type TextWidget struct {
 	WidgetBase
 	MinLength       int
+	Regexp          string
 	ValidationError string
 }
 
@@ -65,7 +67,17 @@ func (w *TextWidget) Fill(values url.Values) bool {
 		value = values[w.Id][0]
 	}
 	w.form.findNestedField(w.Id, value)
+
+	validated := true
 	if len(value) < w.MinLength {
+		validated = false
+	}
+	if validated && len(w.Regexp) > 0 {
+		if matched, _ := regexp.MatchString(w.Regexp, value); !matched {
+			validated = false
+		}
+	}
+	if !validated {
 		w.Errors = append(w.Errors, w.ValidationError)
 		return false
 	}

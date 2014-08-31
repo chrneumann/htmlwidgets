@@ -232,19 +232,6 @@ func (f *Form) validate() bool {
 	return !anyError
 }
 
-// Regex creates a Validator to check a string for a matching regexp.
-//
-// If the expression does not match the string to be validated,
-// the given error msg is returned.
-func Regex(exp, msg string) Validator {
-	return func(value interface{}) []string {
-		if matched, _ := regexp.MatchString(exp, value.(string)); !matched {
-			return []string{msg}
-		}
-		return nil
-	}
-}
-
 
 
 
