@@ -38,7 +38,7 @@ type Widget interface {
 
 // WidgetBase contains common fields used by widgets.
 type WidgetBase struct {
-	Id, Label, Description string
+	Id, Label, Description, Required string
 	// Errors contains any validation errors.
 	Errors []string
 	Form   *Form
@@ -58,7 +58,15 @@ type IntegerWidget struct{ WidgetBase }
 type BoolWidget struct{ WidgetBase }
 
 func (w *TextWidget) Fill(values url.Values) bool {
-	w.Form.findNestedField(w.Id, values[w.Id][0])
+	value := ""
+	if len(values[w.Id]) == 1 {
+		value = values[w.Id][0]
+	}
+	w.Form.findNestedField(w.Id, value)
+	if len(w.Required) > 0 && len(value) == 0 {
+		w.Errors = append(w.Errors, w.Required)
+		return false
+	}
 	return true
 }
 

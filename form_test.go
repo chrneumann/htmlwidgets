@@ -28,7 +28,7 @@ type TestAppDataEmbed struct {
 
 type TestAppData struct {
 	TestAppDataEmbed
-	//Name  string
+	Name  string
 	Age   int
 	Extra map[string]interface{}
 }
@@ -38,14 +38,14 @@ func TestRender(t *testing.T) {
 	data.Extra = make(map[string]interface{})
 	data.Extra["ExtraField"] = ""
 	form := NewForm(&data)
-	form.AddWidget(new(TextWidget), "Title", "Title", "Your title")
-	//TextWidget{Id: "Name", Label: "Name", Description: "Your full name"},
-	form.AddWidget(new(IntegerWidget), "Age", "Age", "Years since your birth")
-	form.AddWidget(new(BoolWidget), "Extra.ExtraField", "Alive", "Still alive?")
+	form.AddWidget(new(TextWidget), "Title", "Title", "Your title", "")
+	form.AddWidget(new(TextWidget), "Name", "Name", "Your full name", "Required!")
+	form.AddWidget(new(IntegerWidget), "Age", "Age", "Years since your birth", "")
+	form.AddWidget(new(BoolWidget), "Extra.ExtraField", "Alive", "Still alive?", "")
 
 	urlValues := url.Values{
-		"Title": []string{""},
-		//	"Name":             []string{""},
+		"Title":            []string{""},
+		"Name":             []string{""},
 		"Age":              []string{"14"},
 		"Extra.ExtraField": []string{"true"},
 	}
@@ -64,16 +64,16 @@ func TestRender(t *testing.T) {
 			},
 			Data: "",
 		},
-		/*
-			{
-				Field: "Name",
-				Expected: WidgetRenderData{
-					Id: "Name",
-					Label:       "Your name",
-					Description: "Your full name",
-					Errors:      []string{"Required!"},
-					Data:       "",
-		*/
+		WidgetRenderData{
+			WidgetBase: WidgetBase{
+				Id:          "Name",
+				Label:       "Name",
+				Description: "Your full name",
+				Required:    "Required!",
+				Errors:      []string{"Required!"},
+			},
+			Data: "",
+		},
 		WidgetRenderData{
 			WidgetBase: WidgetBase{
 				Id:          "Age",
