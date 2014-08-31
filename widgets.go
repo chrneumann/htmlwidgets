@@ -125,3 +125,16 @@ func (w *SelectWidget) Fill(values url.Values) bool {
 func (w SelectWidget) GetRenderData() WidgetRenderData {
 	return WidgetRenderData{WidgetBase: w.WidgetBase, Data: w.Options}
 }
+
+type HiddenWidget struct {
+	WidgetBase
+}
+
+func (w *HiddenWidget) Fill(values url.Values) bool {
+	value := ""
+	if len(values[w.Id]) == 1 {
+		value = values[w.Id][0]
+	}
+	w.form.findNestedField(w.Id, value)
+	return true
+}

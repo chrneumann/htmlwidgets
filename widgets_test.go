@@ -88,6 +88,20 @@ func TestSelectWidget(t *testing.T) {
 	})
 }
 
+type TestHiddenWidgetData struct {
+	Id string
+}
+
+func TestHiddenWidget(t *testing.T) {
+	testWidget(t, &WidgetTest{
+		Widget:      new(HiddenWidget),
+		AppStruct:   &TestHiddenWidgetData{},
+		URLValue:    "foo",
+		FilledValue: "foo",
+		RenderData:  "foo",
+	})
+}
+
 /*
 
 func TestSelectWidget(t *testing.T) {
