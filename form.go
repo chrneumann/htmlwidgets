@@ -232,36 +232,6 @@ func (f *Form) validate() bool {
 	return !anyError
 }
 
-// Validator is a function which validates the given data and returns error
-// messages if the data does not validate.
-type Validator func(interface{}) []string
-
-// And is a Validator that collects errors of all given validators.
-func And(vs ...Validator) Validator {
-	return func(value interface{}) []string {
-		errors := []string{}
-		for _, v := range vs {
-			errors = append(errors, v(value)...)
-		}
-		if len(errors) == 0 {
-			return nil
-		}
-		return errors
-	}
-}
-
-// Required creates a Validator to check for non empty values.
-//
-// msg is set as validation error.
-func Required(msg string) Validator {
-	return func(value interface{}) []string {
-		if value == reflect.Zero(reflect.TypeOf(value)).Interface() {
-			return []string{msg}
-		}
-		return nil
-	}
-}
-
 // Regex creates a Validator to check a string for a matching regexp.
 //
 // If the expression does not match the string to be validated,
