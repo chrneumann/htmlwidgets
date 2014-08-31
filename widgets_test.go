@@ -34,7 +34,7 @@ func TestSelectWidget(t *testing.T) {
 		SelectOption{"bar", "Bar", false},
 	}
 	form.AddWidget(&SelectWidget{Options: options},
-		"Option", "Option", "Choose one", "")
+		"Option", "Option", "Choose one")
 	urlValues := url.Values{
 		"Option": []string{"bar"},
 	}

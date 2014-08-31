@@ -44,9 +44,8 @@ type Form struct {
 	Action string
 }
 
-func (f *Form) AddWidget(widget Widget, id, label, description,
-	required string) {
-	*(widget.Base()) = WidgetBase{id, label, description, required, nil, f}
+func (f *Form) AddWidget(widget Widget, id, label, description string) {
+	*(widget.Base()) = WidgetBase{id, label, description, nil, f}
 	f.Widgets = append(f.Widgets, widget)
 }
 
