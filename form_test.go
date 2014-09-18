@@ -63,7 +63,8 @@ func TestRender(t *testing.T) {
 				Label:       "Title",
 				Description: "Your title",
 			},
-			Data: "",
+			Template: "text",
+			Data:     "",
 		},
 		WidgetRenderData{
 			WidgetBase: WidgetBase{
@@ -72,7 +73,8 @@ func TestRender(t *testing.T) {
 				Description: "Your full name",
 				Errors:      []string{"Required!"},
 			},
-			Data: "",
+			Template: "text",
+			Data:     "",
 		},
 		WidgetRenderData{
 			WidgetBase: WidgetBase{
@@ -80,7 +82,8 @@ func TestRender(t *testing.T) {
 				Label:       "Age",
 				Description: "Years since your birth",
 			},
-			Data: 14,
+			Template: "text",
+			Data:     14,
 		},
 		WidgetRenderData{
 			WidgetBase: WidgetBase{
@@ -88,7 +91,8 @@ func TestRender(t *testing.T) {
 				Label:       "Alive",
 				Description: "Still alive?",
 			},
-			Data: true,
+			Template: "checkbox",
+			Data:     true,
 		},
 	}
 	for i, test := range fieldTests {

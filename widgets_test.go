@@ -36,6 +36,8 @@ type WidgetTest struct {
 	RenderData interface{}
 	// Error is the expected error if any
 	Error string
+	// Template is the expected template Id
+	Template string
 }
 
 // testWidget performs common tests on the given widget
@@ -63,7 +65,8 @@ func testWidget(t *testing.T, test *WidgetTest) {
 			Description: "Description",
 			Errors:      errors,
 		},
-		Data: test.RenderData,
+		Data:     test.RenderData,
+		Template: test.Template,
 	}
 	if len(renderData.Errors) > 0 {
 		t.Errorf("RenderData contains general errors: %v", renderData.Errors)
@@ -92,6 +95,7 @@ func TestSelectWidget(t *testing.T) {
 			SelectOption{"foo", "Foo", false},
 			SelectOption{"bar", "Bar", true},
 		},
+		Template: "select",
 	})
 }
 
@@ -106,6 +110,7 @@ func TestHiddenWidget(t *testing.T) {
 		URLValue:    "foo",
 		FilledValue: "foo",
 		RenderData:  "foo",
+		Template:    "hidden",
 	})
 }
 
@@ -120,6 +125,7 @@ func TestTextWidget(t *testing.T) {
 		URLValue:    "foo",
 		FilledValue: "foo",
 		RenderData:  "foo",
+		Template:    "text",
 	})
 	testWidget(t, &WidgetTest{
 		Widget:      &TextWidget{MinLength: 5, ValidationError: ">=5"},
@@ -128,6 +134,7 @@ func TestTextWidget(t *testing.T) {
 		FilledValue: "foo",
 		RenderData:  "foo",
 		Error:       ">=5",
+		Template:    "text",
 	})
 	testWidget(t, &WidgetTest{
 		Widget:      &TextWidget{Regexp: `^\w{2}$`, ValidationError: "exactly 2"},
@@ -135,6 +142,7 @@ func TestTextWidget(t *testing.T) {
 		URLValue:    "fo",
 		FilledValue: "fo",
 		RenderData:  "fo",
+		Template:    "text",
 	})
 	testWidget(t, &WidgetTest{
 		Widget:      &TextWidget{Regexp: `^\w{2}$`, ValidationError: "exactly 2"},
@@ -143,6 +151,7 @@ func TestTextWidget(t *testing.T) {
 		FilledValue: "foo",
 		RenderData:  "foo",
 		Error:       "exactly 2",
+		Template:    "text",
 	})
 }
 

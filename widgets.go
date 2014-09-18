@@ -25,12 +25,14 @@ import (
 // WidgetRenderData contains the data needed for widget rendering.
 type WidgetRenderData struct {
 	WidgetBase
+	// Template is the id of the template to be used to render the widget.
+	Template string
 	// Data contains any widget dependent data used to render the widget.
 	Data interface{}
 }
 
 type Widget interface {
-	// GetRenderData returns the data needed to render the widget
+	// GetRenderData returns the data needed to render the widget.
 	GetRenderData() WidgetRenderData
 	// Fill reads the given values to fill into the app struct.
 	Fill(url.Values) bool
@@ -47,7 +49,10 @@ type WidgetBase struct {
 
 func (w WidgetBase) GetRenderData() WidgetRenderData {
 	value, _ := w.form.getNestedField(w.Id)
-	return WidgetRenderData{WidgetBase: w, Data: value.Interface()}
+	return WidgetRenderData{
+		WidgetBase: w,
+		Template:   "text",
+		Data:       value.Interface()}
 }
 
 func (w *WidgetBase) Base() *WidgetBase {
@@ -59,6 +64,12 @@ type TextWidget struct {
 	MinLength       int
 	Regexp          string
 	ValidationError string
+}
+
+func (w *TextWidget) GetRenderData() WidgetRenderData {
+	rd := w.Base().GetRenderData()
+	rd.Template = "text"
+	return rd
 }
 
 func (w *TextWidget) Fill(values url.Values) bool {
@@ -86,16 +97,28 @@ func (w *TextWidget) Fill(values url.Values) bool {
 
 type BoolWidget struct{ WidgetBase }
 
+func (w *BoolWidget) GetRenderData() WidgetRenderData {
+	rd := w.Base().GetRenderData()
+	rd.Template = "checkbox"
+	return rd
+}
+
 func (w *BoolWidget) Fill(values url.Values) bool {
-	v, err := strconv.ParseBool(values[w.Id][0])
-	if err != nil {
-		return false
+	if len(values[w.Id]) != 0 {
+		if v, err := strconv.ParseBool(values[w.Id][0]); err == nil {
+			w.form.findNestedField(w.Id, v)
+		}
 	}
-	w.form.findNestedField(w.Id, v)
 	return true
 }
 
 type IntegerWidget struct{ WidgetBase }
+
+func (w *IntegerWidget) GetRenderData() WidgetRenderData {
+	rd := w.Base().GetRenderData()
+	rd.Template = "text"
+	return rd
+}
 
 func (w *IntegerWidget) Fill(values url.Values) bool {
 	v, err := strconv.ParseInt(values[w.Id][0], 0, 0)
@@ -135,11 +158,20 @@ func (w *SelectWidget) Fill(values url.Values) bool {
 }
 
 func (w SelectWidget) GetRenderData() WidgetRenderData {
-	return WidgetRenderData{WidgetBase: w.WidgetBase, Data: w.Options}
+	return WidgetRenderData{
+		WidgetBase: w.WidgetBase,
+		Template:   "select",
+		Data:       w.Options}
 }
 
 type HiddenWidget struct {
 	WidgetBase
+}
+
+func (w *HiddenWidget) GetRenderData() WidgetRenderData {
+	rd := w.Base().GetRenderData()
+	rd.Template = "hidden"
+	return rd
 }
 
 func (w *HiddenWidget) Fill(values url.Values) bool {
