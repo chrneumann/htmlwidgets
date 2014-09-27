@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 )
 
 // WidgetTest defines a test for testWidget
@@ -32,6 +33,9 @@ type WidgetTest struct {
 	URLValue string
 	// FilledValue is the expected value filled into the appstruct
 	FilledValue interface{}
+	// EmptyValue is the expected value filled into the appstruct if no
+	// or an invalid value is submitted.
+	EmptyValue interface{}
 	// RenderData is the expected value of the WidgetRenderData Data field
 	RenderData interface{}
 	// Error is the expected error if any
@@ -47,10 +51,16 @@ func testWidget(t *testing.T, test *WidgetTest) {
 	urlValues := url.Values{
 		"Id": []string{test.URLValue},
 	}
+	form.Fill(nil)
+	if !reflect.DeepEqual(test.EmptyValue,
+		reflect.ValueOf(test.AppStruct).Elem().FieldByName("Id").Interface()) {
+		t.Errorf("AppStruct for empty value field is\n%v\nshould be \n%v",
+			test.AppStruct, test.EmptyValue)
+	}
 	form.Fill(urlValues)
 	if !reflect.DeepEqual(test.FilledValue,
 		reflect.ValueOf(test.AppStruct).Elem().FieldByName("Id").Interface()) {
-		t.Errorf("AppStruct field is\n%v\nshould be \n%v", test.AppStruct,
+		t.Errorf("AppStruct for filled field is\n%v\nshould be \n%v", test.AppStruct,
 			test.FilledValue)
 	}
 	renderData := form.RenderData()
@@ -73,8 +83,8 @@ func testWidget(t *testing.T, test *WidgetTest) {
 	}
 	renderData.Widgets[0].WidgetBase.form = nil
 	if !reflect.DeepEqual(renderData.Widgets[0], expected) {
-		t.Errorf("RenderData for Widget '%v' =\n%#v,\nexpected\n%#v",
-			expected.Id, renderData.Widgets[0], expected)
+		t.Errorf("RenderData for Widget '%T' =\n%#v,\nexpected\n%#v",
+			test.Widget, renderData.Widgets[0], expected)
 	}
 }
 
@@ -91,6 +101,7 @@ func TestSelectWidget(t *testing.T) {
 		AppStruct:   &TestSelectWidgetData{},
 		URLValue:    "bar",
 		FilledValue: "bar",
+		EmptyValue:  "foo",
 		RenderData: []SelectOption{
 			SelectOption{"foo", "Foo", false},
 			SelectOption{"bar", "Bar", true},
@@ -109,8 +120,41 @@ func TestHiddenWidget(t *testing.T) {
 		AppStruct:   &TestHiddenWidgetData{},
 		URLValue:    "foo",
 		FilledValue: "foo",
+		EmptyValue:  "",
 		RenderData:  "foo",
 		Template:    "hidden",
+	})
+}
+
+type TestFileWidgetData struct {
+	Id string
+}
+
+func TestFileWidget(t *testing.T) {
+	testWidget(t, &WidgetTest{
+		Widget:      new(FileWidget),
+		AppStruct:   &TestFileWidgetData{},
+		URLValue:    "",
+		FilledValue: "",
+		EmptyValue:  "",
+		RenderData:  "",
+		Template:    "file",
+	})
+}
+
+type TestBoolWidgetData struct {
+	Id bool
+}
+
+func TestBoolWidget(t *testing.T) {
+	testWidget(t, &WidgetTest{
+		Widget:      new(BoolWidget),
+		AppStruct:   &TestBoolWidgetData{},
+		URLValue:    "true",
+		FilledValue: true,
+		EmptyValue:  false,
+		RenderData:  true,
+		Template:    "checkbox",
 	})
 }
 
@@ -124,6 +168,7 @@ func TestTextWidget(t *testing.T) {
 		AppStruct:   &TestTextWidgetData{},
 		URLValue:    "foo",
 		FilledValue: "foo",
+		EmptyValue:  "",
 		RenderData:  "foo",
 		Template:    "text",
 	})
@@ -132,6 +177,7 @@ func TestTextWidget(t *testing.T) {
 		AppStruct:   &TestTextWidgetData{},
 		URLValue:    "foo",
 		FilledValue: "foo",
+		EmptyValue:  "",
 		RenderData:  "foo",
 		Error:       ">=5",
 		Template:    "text",
@@ -141,6 +187,7 @@ func TestTextWidget(t *testing.T) {
 		AppStruct:   &TestTextWidgetData{},
 		URLValue:    "fo",
 		FilledValue: "fo",
+		EmptyValue:  "",
 		RenderData:  "fo",
 		Template:    "text",
 	})
@@ -149,123 +196,51 @@ func TestTextWidget(t *testing.T) {
 		AppStruct:   &TestTextWidgetData{},
 		URLValue:    "foo",
 		FilledValue: "foo",
+		EmptyValue:  "",
 		RenderData:  "foo",
 		Error:       "exactly 2",
 		Template:    "text",
 	})
 }
 
-/*
-
-func TestSelectWidget(t *testing.T) {
-	widget := SelectWidget{[]Option{
-		Option{"foo", "The Foo!"},
-		Option{"bar", "The Bar!"}}}
-	tests := []struct {
-		Name, Value, Expected string
-	}{
-		{"TestSelect", "", `<select id="TestSelect" name="TestSelect">
-<option value="foo">The Foo!</option>
-<option value="bar">The Bar!</option>
-</select>`},
-		{"TestSelect2", "unknown!", `<select id="TestSelect2" name="TestSelect2">
-<option value="foo">The Foo!</option>
-<option value="bar">The Bar!</option>
-</select>`},
-		{"TestSelect3", "foo", `<select id="TestSelect3" name="TestSelect3">
-<option value="foo" selected>The Foo!</option>
-<option value="bar">The Bar!</option>
-</select>`},
-		{"TestSelect4", "bar", `<select id="TestSelect4" name="TestSelect4">
-<option value="foo">The Foo!</option>
-<option value="bar" selected>The Bar!</option>
-</select>`}}
-	for _, v := range tests {
-		ret := widget.HTML(v.Name, v.Value)
-		if string(ret) != v.Expected {
-			t.Errorf(`SelectWidget.HTML("%v", "%v") = "%v", should be "%v".`,
-				v.Name, v.Value, ret, v.Expected)
-		}
-	}
+type TestTextAreaWidgetData struct {
+	Id string
 }
 
-func TestHiddenWidget(t *testing.T) {
-	widget := new(HiddenWidget)
-	ret := widget.HTML("foo", "bar")
-	expected := `<input id="foo" type="hidden" name="foo" value="bar"/>`
-	if string(ret) != expected {
-		t.Errorf(`HiddenWidget.HTML("Foo", "bar") = "%v", should be "%v".`,
-			ret, expected)
-	}
+func TestTextAreaWidget(t *testing.T) {
+	testWidget(t, &WidgetTest{
+		Widget:      new(TextWidget),
+		AppStruct:   &TestTextWidgetData{},
+		URLValue:    "foo",
+		FilledValue: "foo",
+		EmptyValue:  "",
+		RenderData:  "foo",
+		Template:    "text",
+	})
+	testWidget(t, &WidgetTest{
+		Widget:      &TextWidget{MinLength: 5, ValidationError: ">=5"},
+		AppStruct:   &TestTextWidgetData{},
+		URLValue:    "foo",
+		FilledValue: "foo",
+		EmptyValue:  "",
+		RenderData:  "foo",
+		Error:       ">=5",
+		Template:    "text",
+	})
 }
 
-func TestFileWidget(t *testing.T) {
-	widget := new(FileWidget)
-	ret := widget.HTML("foo", "")
-	expected := `<input id="foo" type="file" name="foo"/>`
-	if string(ret) != expected {
-		t.Errorf(`FileWidget.HTML("Foo", "") = "%v", should be "%v".`,
-			ret, expected)
-	}
-}
-
-func TestPasswordWidget(t *testing.T) {
-	widget := new(PasswordWidget)
-	ret := widget.HTML("foo", "")
-	expected := `<input id="foo" type="password" name="foo"/>`
-	if string(ret) != expected {
-		t.Errorf(`PasswordWidget.HTML("Foo", "") = "%v", should be "%v".`,
-			ret, expected)
-	}
-}
-
-type TestDateTimeWidgetData struct {
-	ID *time.Time
-}
-
-func TestDateTimeWidget(t *testing.T) {
-	data := TestDateTimeWidgetData{}
-	input := `<input id="ID" type="datetime" name="ID" value="2008-09-08T22:47:31-07:00"/>`
-	zeroInput := `<input id="ID" type="datetime" name="ID" value=""/>`
-	value, err := time.Parse(time.RFC3339, "2008-09-08T22:47:31-07:00")
-	if err != nil {
-		t.Fatal(err)
-	}
-	testWidget(t, new(DateTimeWidget), &data, input, zeroInput, &value,
-		"2008-09-08T22:47:31-07:00")
-}
-
-type TestCheckWidgetData struct {
-	ID bool
-}
-
-func TestCheckWidget(t *testing.T) {
-	data := TestCheckWidgetData{}
-	input := `<input id="ID" type="checkbox" name="ID" value="true" checked="checked"/>`
-	zeroInput := `<input id="ID" type="checkbox" name="ID" value="true"/>`
-	testWidget(t, new(CheckWidget), &data, input, zeroInput, true, "true")
-}
-
-/*
-func TestDateWidget(t *testing.T) {
-	data := TestDateTimeWidgetData{}
-	input := `<input id="ID" type="date" name="ID" value="2008-09-08"/>`
-	zeroInput := `<input id="ID" type="date" name="ID" value=""/>`
-	value, err := time.Parse("2006-01-02", "2008-09-08")
-	if err != nil {
-		t.Fatal(err)
-	}
-	testWidget(t, new(DateWidget), &data, input, zeroInput, value, "2008-09-08")
+type TestTimeWidgetData struct {
+	Id time.Time
 }
 
 func TestTimeWidget(t *testing.T) {
-	data := TestDateTimeWidgetData{}
-	input := `<input id="ID" type="time" name="ID" value="22:47:31"/>`
-	zeroInput := `<input id="ID" type="time" name="ID" value=""/>`
-	value, err := time.Parse("15:04:05", "22:47:31")
-	if err != nil {
-		t.Fatal(err)
-	}
-	testWidget(t, new(TimeWidget), &data, input, zeroInput, value, "22:47:31")
+	testWidget(t, &WidgetTest{
+		Widget:      new(TimeWidget),
+		AppStruct:   &TestTimeWidgetData{},
+		URLValue:    "1985-04-10T08:10",
+		FilledValue: time.Date(1985, time.April, 10, 8, 10, 0, 0, time.UTC),
+		EmptyValue:  time.Time{},
+		RenderData:  "1985-04-10T08:10:00",
+		Template:    "time",
+	})
 }
-*/

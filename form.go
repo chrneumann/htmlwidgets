@@ -44,9 +44,13 @@ type Form struct {
 	Action string
 }
 
-func (f *Form) AddWidget(widget Widget, id, label, description string) {
-	*(widget.Base()) = WidgetBase{id, label, description, nil, f}
+// AddWidget adds a new widget to the form and sets the given attributes.
+//
+// It returns the added widget
+func (f *Form) AddWidget(widget Widget, id, label, description string) Widget {
+	*(widget.Base()) = WidgetBase{id, label, description, nil, nil, f}
 	f.Widgets = append(f.Widgets, widget)
+	return widget
 }
 
 // NewForm creates a new Form with data stored in the
@@ -73,54 +77,22 @@ func (f Form) RenderData() (renderData *RenderData) {
 	renderData.Action = f.Action
 	renderData.Widgets = make([]WidgetRenderData, 0)
 	for _, widget := range f.Widgets {
-		/*
-			} else if _, ok := widget.(*FileWidget); ok {
-				renderData.EncTypeAttr = `enctype="multipart/form-data"`
-			}
-			value, err := f.getNestedField(widget.Id)
-			if err != nil {
-				value = reflect.ValueOf("")
-			}
-		*/
+		if _, ok := widget.(*FileWidget); ok {
+			renderData.EncTypeAttr = `enctype="multipart/form-data"`
+		}
 		renderData.Widgets = append(renderData.Widgets,
 			widget.GetRenderData())
-
-		/*
-			WidgetRenderData{
-			Label:       widget.Label,
-			Input:       widget.HTML(widget.Id, value.Interface()),
-			Description: widget.Description,
-			Errors:      f.errors[widget.Id]})
-		*/
 	}
 	renderData.Errors = f.errors[""]
 	return
 }
 
-/*
-
 // AddError adds an error to a widget's error list.
 //
 // To add global form errors, use an empty string as the widget's name.
-func (f *Form) AddError(widget string, error string) {
-	if f.errors[widget] == nil {
-		f.errors[widget] = make([]string, 0, 1)
-	}
-	f.errors[widget] = append(f.errors[widget], error)
+func (f *Form) AddError(widgetId string, error string) {
+	f.errors[widgetId] = append(f.errors[widgetId], error)
 }
-
-const (
-	rawField = iota
-	boolField
-	stringField
-)
-
-type widgetType struct {
-	IsArray   bool
-	ValueType int
-}
-
-*/
 
 // getNestedField searches for the given nested field in the given data
 func (f Form) getNestedField(field string) (reflect.Value, error) {
@@ -187,232 +159,6 @@ func (f *Form) Fill(values url.Values) bool {
 		if ok := widget.Fill(values); !ok {
 			ret = false
 		}
-		/*
-			widgetValue, err := f.getNestedField(widget.Id)
-			if err != nil {
-				continue
-			}
-			widgetType := widgetValue.Type()
-			if fieldType.Kind() == reflect.Slice {
-				fieldType = fieldType.Elem()
-			}
-			if paramValue, ok := values[field.Id]; ok {
-				for _, value := range paramValue {
-					f.setNestedField(field.Id, value)
-				}
-			} else {
-				f.setNestedField(field.Id, "")
-			}
-		*/
 	}
-	//return f.validate()
 	return ret
 }
-
-/*
-
-// validate validates the currently present data.
-//
-// Resets any previous errors.
-// Returns true iff the data validates.
-func (f *Form) validate() bool {
-	anyError := false
-	for _, field := range f.Fields {
-		value, err := f.getNestedField(field.Id)
-		if err != nil {
-			return false
-		}
-		if field.Validator != nil {
-			if errors := field.Validator(value.Interface()); errors != nil {
-				f.errors[field.Id] = errors
-				anyError = true
-			}
-		}
-	}
-	return !anyError
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// timeConverter converts a string to a time.Time
-func timeConverter(in string) reflect.Value {
-	out, err := time.Parse(time.RFC3339, in)
-	if err != nil {
-		out, err = time.Parse("2006-01-02", in)
-	}
-	if err != nil {
-		out, _ = time.Parse("15:04:05", in)
-	}
-	return reflect.ValueOf(out)
-}
-
-type DateTimeWidget int
-
-func (t DateTimeWidget) HTML(field string, value interface{}) template.HTML {
-	var out string
-	if obj, ok := value.(time.Time); ok {
-		out = obj.Format(time.RFC3339)
-	} else if obj, ok := value.(*time.Time); ok {
-		if obj == nil {
-			out = ""
-		} else {
-			out = obj.Format(time.RFC3339)
-		}
-	} else {
-		out = fmt.Sprintf("%v", obj)
-	}
-	return template.HTML(fmt.Sprintf(
-		`<input id="%v" type="datetime" name="%v" value="%v"/>`,
-		field, field, html.EscapeString(out)))
-}
-
-type DateWidget int
-
-func (t DateWidget) HTML(field string, value interface{}) template.HTML {
-	var out string
-	if obj, ok := value.(time.Time); ok {
-		out = obj.Format("2006-01-02")
-	} else if obj, ok := value.(*time.Time); ok {
-		if obj == nil {
-			out = ""
-		} else {
-			out = obj.Format("2006-01-02")
-		}
-	} else {
-		out = fmt.Sprintf("%v", obj)
-	}
-	return template.HTML(fmt.Sprintf(
-		`<input id="%v" type="date" name="%v" value="%v"/>`,
-		field, field, html.EscapeString(out)))
-}
-
-type TimeWidget int
-
-func (t TimeWidget) HTML(field string, value interface{}) template.HTML {
-	var out string
-	if obj, ok := value.(time.Time); ok {
-		out = obj.Format("15:04:05")
-	} else if obj, ok := value.(*time.Time); ok {
-		if obj == nil {
-			out = ""
-		} else {
-			out = obj.Format("15:04:05")
-		}
-	} else {
-		out = fmt.Sprintf("%v", obj)
-	}
-	return template.HTML(fmt.Sprintf(
-		`<input id="%v" type="time" name="%v" value="%v"/>`,
-		field, field, html.EscapeString(out)))
-}
-
-type Text int
-
-func (t Text) HTML(field string, value interface{}) template.HTML {
-	return template.HTML(fmt.Sprintf(
-		`<input id="%v" type="text" name="%v" value="%v"/>`,
-		field, field, html.EscapeString(
-			fmt.Sprintf("%v", value))))
-}
-
-type CheckWidget int
-
-func (t CheckWidget) HTML(field string, value interface{}) template.HTML {
-	checked := ""
-	if val, ok := value.(bool); ok && val {
-		checked = ` checked="checked"`
-	}
-	return template.HTML(fmt.Sprintf(
-		`<input id="%v" type="checkbox" name="%v" value="true"%v/>`,
-		field, field, checked))
-}
-
-type AlohaEditor int
-
-func (t AlohaEditor) HTML(field string, value interface{}) template.HTML {
-	return template.HTML(fmt.Sprintf(
-		`<textarea class="editor" id="%v" name="%v"/>%v</textarea>`,
-		field, field, html.EscapeString(
-			fmt.Sprintf("%v", value))))
-}
-
-type TextArea int
-
-func (t TextArea) HTML(field string, value interface{}) template.HTML {
-	return template.HTML(fmt.Sprintf(
-		`<textarea id="%v" name="%v"/>%v</textarea>`,
-		field, field, html.EscapeString(
-			fmt.Sprintf("%v", value))))
-}
-
-// Option of a select widget.
-type Option struct {
-	Value, Text string
-}
-
-// SelectWidget renders a selection field.
-type SelectWidget struct {
-	Options []Option
-}
-
-func (t SelectWidget) HTML(field string, value interface{}) template.HTML {
-	var options string
-	for _, v := range t.Options {
-		selected := ""
-		if v.Value == value.(string) {
-			selected = " selected"
-		}
-		options += fmt.Sprintf("<option value=\"%v\"%v>%v</option>\n",
-			v.Value, selected, v.Text)
-	}
-	ret := fmt.Sprintf("<select id=\"%v\" name=\"%v\">\n%v</select>",
-		field, field, options)
-	return template.HTML(ret)
-}
-
-// HiddenWidget renders a hidden input field.
-type HiddenWidget int
-
-func (t HiddenWidget) HTML(field string, value interface{}) template.HTML {
-	return template.HTML(
-		fmt.Sprintf(`<input id="%v" type="hidden" name="%v" value="%v"/>`,
-			field, field, value))
-}
-
-// PasswordWidget renders a password field.
-type PasswordWidget int
-
-func (t PasswordWidget) HTML(field string, value interface{}) template.HTML {
-	return template.HTML(
-		fmt.Sprintf(`<input id="%v" type="password" name="%v"/>`,
-			field, field))
-}
-
-// FileWidget renders a file upload field.
-type FileWidget int
-
-func (t FileWidget) HTML(field string, value interface{}) template.HTML {
-	return template.HTML(
-		fmt.Sprintf(`<input id="%v" type="file" name="%v"/>`,
-			field, field))
-}
-
-
-*/

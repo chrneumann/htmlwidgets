@@ -20,6 +20,13 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"time"
+)
+
+const (
+	RFC3339      = "2006-01-02T15:04:05"
+	RFC3339Nano  = "2006-01-02T15:04:05.999999999"
+	RFC3339Short = "2006-01-02T15:04"
 )
 
 // WidgetRenderData contains the data needed for widget rendering.
@@ -44,7 +51,9 @@ type WidgetBase struct {
 	Id, Label, Description string
 	// Errors contains any validation errors.
 	Errors []string
-	form   *Form
+	// HTML classes to assign.
+	Classes []string
+	form    *Form
 }
 
 func (w WidgetBase) GetRenderData() WidgetRenderData {
@@ -73,6 +82,7 @@ func (w *TextWidget) GetRenderData() WidgetRenderData {
 }
 
 func (w *TextWidget) Fill(values url.Values) bool {
+	w.Errors = nil
 	value := ""
 	if len(values[w.Id]) == 1 {
 		value = values[w.Id][0]
@@ -87,6 +97,47 @@ func (w *TextWidget) Fill(values url.Values) bool {
 		if matched, _ := regexp.MatchString(w.Regexp, value); !matched {
 			validated = false
 		}
+	}
+	if !validated {
+		w.Errors = append(w.Errors, w.ValidationError)
+		return false
+	}
+	return true
+}
+
+type PasswordWidget struct {
+	TextWidget
+}
+
+func (w PasswordWidget) GetRenderData() WidgetRenderData {
+	rd := w.TextWidget.GetRenderData()
+	rd.Template = "password"
+	return rd
+}
+
+type TextAreaWidget struct {
+	WidgetBase
+	MinLength       int
+	ValidationError string
+}
+
+func (w *TextAreaWidget) GetRenderData() WidgetRenderData {
+	rd := w.Base().GetRenderData()
+	rd.Template = "textarea"
+	return rd
+}
+
+func (w *TextAreaWidget) Fill(values url.Values) bool {
+	w.Errors = nil
+	value := ""
+	if len(values[w.Id]) == 1 {
+		value = values[w.Id][0]
+	}
+	w.form.findNestedField(w.Id, value)
+
+	validated := true
+	if len(value) < w.MinLength {
+		validated = false
 	}
 	if !validated {
 		w.Errors = append(w.Errors, w.ValidationError)
@@ -180,5 +231,62 @@ func (w *HiddenWidget) Fill(values url.Values) bool {
 		value = values[w.Id][0]
 	}
 	w.form.findNestedField(w.Id, value)
+	return true
+}
+
+// FileWidget is a file upload widget that can be used to render a
+// HTML file input. It will ignore any uploaded file, you have to
+// process it b yourself.
+//
+// If you add this widget to a Form, the EncTypeAttr ob the RenderData
+// will be set on rendering.
+type FileWidget struct {
+	WidgetBase
+}
+
+func (w *FileWidget) GetRenderData() WidgetRenderData {
+	rd := w.Base().GetRenderData()
+	rd.Template = "file"
+	return rd
+}
+
+func (w *FileWidget) Fill(values url.Values) bool {
+	return true
+}
+
+// TimeWidget is a widget that allows to set a date and time in the
+// local timezone.
+//
+// It tries to parse values as defined in the constants RFC3339,
+// RFC3339Nano and RFC3339Short and renders the time as RFC3339Nano.
+type TimeWidget struct {
+	WidgetBase
+}
+
+func (w *TimeWidget) GetRenderData() WidgetRenderData {
+	value, _ := w.form.getNestedField(w.Id)
+	timeValue := value.Interface().(time.Time).Format(RFC3339Nano)
+	return WidgetRenderData{
+		WidgetBase: w.WidgetBase,
+		Template:   "time",
+		Data:       timeValue}
+}
+
+func (w *TimeWidget) Fill(values url.Values) bool {
+	value := ""
+	if len(values[w.Id]) == 1 {
+		value = values[w.Id][0]
+	}
+	v, err := time.Parse(RFC3339Nano, value)
+	if err != nil {
+		v, err = time.Parse(RFC3339, value)
+	}
+	if err != nil {
+		v, err = time.Parse(RFC3339Short, value)
+	}
+	if err != nil {
+		v = time.Time{}
+	}
+	w.form.findNestedField(w.Id, v)
 	return true
 }
