@@ -107,6 +107,23 @@ func TestRender(t *testing.T) {
 	}
 }
 
+func TestAddError(t *testing.T) {
+	data := TestAppData{}
+	form := NewForm(&data)
+	form.AddWidget(new(TextWidget), "Name", "", "")
+	form.AddError("Name", "FooError")
+	form.AddError("", "GlobalError")
+	renderData := form.RenderData()
+	if len(renderData.Widgets[0].Errors) != 1 ||
+		renderData.Widgets[0].Errors[0] != "FooError" {
+		t.Errorf(`Field "Foo" should have error "FooError"`)
+	}
+	if len(renderData.Errors) != 1 ||
+		renderData.Errors[0] != "GlobalError" {
+		t.Errorf(`Missing global error "GlobalError"`)
+	}
+}
+
 /*
 
 func TestMapRender(t *testing.T) {
@@ -162,27 +179,6 @@ func TestMapRender(t *testing.T) {
 			t.Errorf("RenderData for Field '%v' =\n%v,\nexpected\n%v",
 				test.Field, renderData.Fields[i], test.Expected)
 		}
-	}
-}
-
-func TestAddError(t *testing.T) {
-	data := TestData{}
-	form := NewForm(&data, []Field{
-		Field{"Name", "Your name", "Your full name", Required("Req!"), nil},
-		Field{"Age", "Your age", "Years since your birth.", Required("Req!"), nil}})
-	form.AddError("Name", "Foo")
-	form.AddError("", "Bar")
-	renderData := form.RenderData()
-	if len(renderData.Fields[0].Errors) != 1 ||
-		renderData.Fields[0].Errors[0] != "Foo" {
-		t.Errorf(`Field "Name" should have error "Foo"`)
-	}
-	if len(renderData.Errors) != 1 ||
-		renderData.Errors[0] != "Bar" {
-		t.Errorf(`Missing global error "Bar"`)
-	}
-	if len(renderData.Fields[1].Errors) != 0 {
-		t.Errorf(`Field "Bar" should have no errors`)
 	}
 }
 

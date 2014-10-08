@@ -80,8 +80,10 @@ func (f Form) RenderData() (renderData *RenderData) {
 		if _, ok := widget.(*FileWidget); ok {
 			renderData.EncTypeAttr = `enctype="multipart/form-data"`
 		}
-		renderData.Widgets = append(renderData.Widgets,
-			widget.GetRenderData())
+		widgetRenderData := widget.GetRenderData()
+		widgetRenderData.Errors = append(widgetRenderData.Errors,
+			f.errors[widget.Base().Id]...)
+		renderData.Widgets = append(renderData.Widgets, widgetRenderData)
 	}
 	renderData.Errors = f.errors[""]
 	return
