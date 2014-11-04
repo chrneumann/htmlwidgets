@@ -107,6 +107,9 @@ func (w *TextWidget) Fill(values url.Values) bool {
 
 type PasswordWidget struct {
 	TextWidget
+	// If the user has to repeat the password to verify it, specify at
+	// least the label and possible error message to be displayed.
+	VerifyLabel, VerifyDescription, VerifyError string
 }
 
 func (w PasswordWidget) GetRenderData() WidgetRenderData {
