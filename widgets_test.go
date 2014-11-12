@@ -51,12 +51,6 @@ func testWidget(t *testing.T, test *WidgetTest) {
 	urlValues := url.Values{
 		"Id": []string{test.URLValue},
 	}
-	form.Fill(nil)
-	if !reflect.DeepEqual(test.EmptyValue,
-		reflect.ValueOf(test.AppStruct).Elem().FieldByName("Id").Interface()) {
-		t.Errorf("AppStruct for empty value field is\n%v\nshould be \n%v",
-			test.AppStruct, test.EmptyValue)
-	}
 	form.Fill(urlValues)
 	if !reflect.DeepEqual(test.FilledValue,
 		reflect.ValueOf(test.AppStruct).Elem().FieldByName("Id").Interface()) {
@@ -85,6 +79,12 @@ func testWidget(t *testing.T, test *WidgetTest) {
 	if !reflect.DeepEqual(renderData.Widgets[0], expected) {
 		t.Errorf("RenderData for Widget '%T' =\n%#v,\nexpected\n%#v",
 			test.Widget, renderData.Widgets[0], expected)
+	}
+	form.Fill(nil)
+	if !reflect.DeepEqual(test.EmptyValue,
+		reflect.ValueOf(test.AppStruct).Elem().FieldByName("Id").Interface()) {
+		t.Errorf("AppStruct for missing value field is\n%v\nshould be \n%v",
+			test.AppStruct, test.EmptyValue)
 	}
 }
 

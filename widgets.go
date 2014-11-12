@@ -162,6 +162,8 @@ func (w *BoolWidget) Fill(values url.Values) bool {
 		if v, err := strconv.ParseBool(values[w.Id][0]); err == nil {
 			w.form.findNestedField(w.Id, v)
 		}
+	} else {
+		w.form.findNestedField(w.Id, false)
 	}
 	return true
 }
