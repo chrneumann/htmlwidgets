@@ -240,7 +240,7 @@ func TestTimeWidget(t *testing.T) {
 		URLValue:    "1985-04-10T08:10",
 		FilledValue: time.Date(1985, time.April, 10, 8, 10, 0, 0, time.UTC),
 		EmptyValue:  time.Time{},
-		RenderData:  "1985-04-10T08:10:00",
+		RenderData:  "1985-04-10T08:10",
 		Template:    "time",
 	})
 }

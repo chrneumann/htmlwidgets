@@ -270,7 +270,7 @@ type TimeWidget struct {
 
 func (w *TimeWidget) GetRenderData() WidgetRenderData {
 	value, _ := w.form.getNestedField(w.Id)
-	timeValue := value.Interface().(time.Time).Format(RFC3339Nano)
+	timeValue := value.Interface().(time.Time).Format(RFC3339Short)
 	return WidgetRenderData{
 		WidgetBase: w.WidgetBase,
 		Template:   "time",
