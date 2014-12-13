@@ -234,11 +234,15 @@ type TestTimeWidgetData struct {
 }
 
 func TestTimeWidget(t *testing.T) {
+	loc, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatalf("Could not load location: %v", err)
+	}
 	testWidget(t, &WidgetTest{
-		Widget:      new(TimeWidget),
+		Widget:      &TimeWidget{Location: loc},
 		AppStruct:   &TestTimeWidgetData{},
 		URLValue:    "1985-04-10T08:10",
-		FilledValue: time.Date(1985, time.April, 10, 8, 10, 0, 0, time.UTC),
+		FilledValue: time.Date(1985, time.April, 10, 8, 10, 0, 0, loc),
 		EmptyValue:  time.Time{},
 		RenderData:  "1985-04-10T08:10",
 		Template:    "time",

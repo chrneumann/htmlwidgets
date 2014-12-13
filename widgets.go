@@ -263,14 +263,18 @@ func (w *FileWidget) Fill(values url.Values) bool {
 // local timezone.
 //
 // It tries to parse values as defined in the constants RFC3339,
-// RFC3339Nano and RFC3339Short and renders the time as RFC3339Nano.
+// RFC3339Nano and RFC3339Short and renders the time as RFC3339Short.
 type TimeWidget struct {
 	WidgetBase
+	Location *time.Location
 }
 
 func (w *TimeWidget) GetRenderData() WidgetRenderData {
+	if w.Location == nil {
+		w.Location = time.UTC
+	}
 	value, _ := w.form.getNestedField(w.Id)
-	timeValue := value.Interface().(time.Time).Format(RFC3339Short)
+	timeValue := value.Interface().(time.Time).In(w.Location).Format(RFC3339Short)
 	return WidgetRenderData{
 		WidgetBase: w.WidgetBase,
 		Template:   "time",
@@ -278,16 +282,19 @@ func (w *TimeWidget) GetRenderData() WidgetRenderData {
 }
 
 func (w *TimeWidget) Fill(values url.Values) bool {
+	if w.Location == nil {
+		w.Location = time.UTC
+	}
 	value := ""
 	if len(values[w.Id]) == 1 {
 		value = values[w.Id][0]
 	}
-	v, err := time.Parse(RFC3339Nano, value)
+	v, err := time.ParseInLocation(RFC3339Nano, value, w.Location)
 	if err != nil {
-		v, err = time.Parse(RFC3339, value)
+		v, err = time.ParseInLocation(RFC3339, value, w.Location)
 	}
 	if err != nil {
-		v, err = time.Parse(RFC3339Short, value)
+		v, err = time.ParseInLocation(RFC3339Short, value, w.Location)
 	}
 	if err != nil {
 		v = time.Time{}
