@@ -216,26 +216,28 @@ func TestEncTypeAttr(t *testing.T) {
 		}
 	}
 }
+*/
 
 func TestFill(t *testing.T) {
-	data := TestData{}
+	data := TestAppData{}
 	data.Extra = make(map[string]interface{}, 0)
-	data.Extra["Number"] = new(int)
-	form := NewForm(&data, []Field{
-		Field{"Name", "Your name", "Your full name", Required("Req!"), nil},
-		Field{"Age", "Your age", "Years since your birth.", Required("Req!"), nil},
-		Field{"Extra.Number", "Number", "", nil, nil},
-	})
+	data.Extra["ExtraField"] = false
+
+	form := NewForm(&data)
+	form.AddWidget(&TextWidget{MinLength: 1, ValidationError: "Required!"},
+		"Name", "Name", "Your full name")
+	form.AddWidget(new(IntegerWidget), "Age", "Age", "Years since your birth")
+	form.AddWidget(new(BoolWidget), "Extra.ExtraField", "Alive", "Still alive?")
+
 	vals := url.Values{
-		"Name":         []string{"Foo"},
-		"Age":          []string{"14"},
-		"Foo":          []string{"noting here"},
-		"Extra.Number": []string{"10"},
+		"Name":             []string{"Foo", "Bar"},
+		"Age":              []string{"14"},
+		"Foo":              []string{"noting here"},
+		"Extra.ExtraField": []string{"true"},
 	}
-	expected := TestData{Name: "Foo", Age: 14}
+	expected := TestAppData{Name: "Foo", Age: 14}
 	expected.Extra = make(map[string]interface{}, 0)
-	number := 10
-	expected.Extra["Number"] = number
+	expected.Extra["ExtraField"] = true
 	if !form.Fill(vals) {
 		t.Errorf("form.Fill(..) returns false, should be true. Errors: %v",
 			form.RenderData().Errors)
@@ -249,4 +251,3 @@ func TestFill(t *testing.T) {
 		t.Errorf("form.Fill(..) returns true, should be false.")
 	}
 }
-*/

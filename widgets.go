@@ -83,12 +83,8 @@ func (w *TextWidget) GetRenderData() WidgetRenderData {
 
 func (w *TextWidget) Fill(values url.Values) bool {
 	w.Errors = nil
-	value := ""
-	if len(values[w.Id]) == 1 {
-		value = values[w.Id][0]
-	}
+	value := values.Get(w.Id)
 	w.form.findNestedField(w.Id, value)
-
 	validated := true
 	if len(value) < w.MinLength {
 		validated = false
@@ -132,12 +128,8 @@ func (w *TextAreaWidget) GetRenderData() WidgetRenderData {
 
 func (w *TextAreaWidget) Fill(values url.Values) bool {
 	w.Errors = nil
-	value := ""
-	if len(values[w.Id]) == 1 {
-		value = values[w.Id][0]
-	}
+	value := values.Get(w.Id)
 	w.form.findNestedField(w.Id, value)
-
 	validated := true
 	if len(value) < w.MinLength {
 		validated = false
@@ -199,9 +191,9 @@ type SelectWidget struct {
 
 func (w *SelectWidget) Fill(values url.Values) bool {
 	value := w.Options[0].Value
-	if len(values[w.Id]) == 1 {
+	if len(values[w.Id]) >= 1 {
 		for i, option := range w.Options {
-			if option.Value == values[w.Id][0] {
+			if option.Value == values.Get(w.Id) {
 				value = option.Value
 				w.Options[i].Selected = true
 			} else {
@@ -231,10 +223,7 @@ func (w *HiddenWidget) GetRenderData() WidgetRenderData {
 }
 
 func (w *HiddenWidget) Fill(values url.Values) bool {
-	value := ""
-	if len(values[w.Id]) == 1 {
-		value = values[w.Id][0]
-	}
+	value := values.Get(w.Id)
 	w.form.findNestedField(w.Id, value)
 	return true
 }
@@ -285,10 +274,7 @@ func (w *TimeWidget) Fill(values url.Values) bool {
 	if w.Location == nil {
 		w.Location = time.UTC
 	}
-	value := ""
-	if len(values[w.Id]) == 1 {
-		value = values[w.Id][0]
-	}
+	value := values.Get(w.Id)
 	v, err := time.ParseInLocation(RFC3339Nano, value, w.Location)
 	if err != nil {
 		v, err = time.ParseInLocation(RFC3339, value, w.Location)
