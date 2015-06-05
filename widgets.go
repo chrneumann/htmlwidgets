@@ -17,6 +17,7 @@
 package htmlwidgets
 
 import (
+	"fmt"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -57,7 +58,10 @@ type WidgetBase struct {
 }
 
 func (w WidgetBase) GetRenderData() WidgetRenderData {
-	value, _ := w.form.getNestedField(w.Id)
+	value, err := w.form.getNestedField(w.Id)
+	if err != nil {
+		panic(fmt.Sprintf("Could not find field %q in data", w.Id))
+	}
 	return WidgetRenderData{
 		WidgetBase: w,
 		Template:   "text",
