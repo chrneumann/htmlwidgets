@@ -21,6 +21,7 @@ import (
 	"html/template"
 	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -122,9 +123,17 @@ func (f *Form) findNestedField(field string, setValue interface{}) (reflect.Valu
 				return reflect.Value{}, nil
 			}
 			value = value.MapIndex(reflect.ValueOf(part))
+		case reflect.Slice:
+			index, err := strconv.Atoi(part)
+			if err != nil {
+				return reflect.Value{},
+					fmt.Errorf("Form: Expected index, got %q in field id %q", part, index)
+			}
+			value = value.Index(index)
 		default:
 			return reflect.Value{},
-				fmt.Errorf("form: Can't find field %q in data", field)
+				fmt.Errorf("form: Can't find field %q in data, reflect type: %v",
+					field, value.Type().Kind())
 		}
 		if !value.IsValid() {
 			return reflect.Value{},

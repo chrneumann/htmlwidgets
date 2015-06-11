@@ -60,7 +60,7 @@ type WidgetBase struct {
 func (w WidgetBase) GetRenderData() WidgetRenderData {
 	value, err := w.form.getNestedField(w.Id)
 	if err != nil {
-		panic(fmt.Sprintf("Could not find field %q in data", w.Id))
+		panic(fmt.Sprintf("form: Could not find field %q in data: %v", w.Id, err))
 	}
 	return WidgetRenderData{
 		WidgetBase: w,
@@ -252,6 +252,52 @@ func (w *FileWidget) Fill(values url.Values) bool {
 	return true
 }
 
+type ListWidget struct {
+	WidgetBase
+	InnerWidget Widget
+}
+
+func (w *ListWidget) GetRenderData() WidgetRenderData {
+	innerValues, err := w.form.getNestedField(w.Id)
+	if err != nil {
+		panic(fmt.Sprintf("Could not find field %q in data", w.Id))
+	}
+	var innerRenderData []WidgetRenderData
+	for i := 0; i < innerValues.Len(); i++ {
+		*(w.InnerWidget.Base()) = WidgetBase{
+			Id:   fmt.Sprintf("%v.%d", w.Id, i),
+			form: w.form,
+		}
+		renderData := w.InnerWidget.GetRenderData()
+		innerRenderData = append(innerRenderData,
+			renderData)
+	}
+	return WidgetRenderData{
+		WidgetBase: w.WidgetBase,
+		Template:   "list",
+		Data:       innerRenderData}
+}
+
+func (w *ListWidget) Fill(values url.Values) bool {
+	valid := true
+	i := 0
+	for {
+		id := fmt.Sprintf("%v.%d", w.Id, i)
+		if _, ok := values[id]; !ok {
+			break
+		}
+		*(w.InnerWidget.Base()) = WidgetBase{
+			Id:   id,
+			form: w.form,
+		}
+		if !w.InnerWidget.Fill(values) {
+			valid = false
+		}
+		i++
+	}
+	return valid
+}
+
 // TimeWidget is a widget that allows to set a date and time in the
 // local timezone.
 //
@@ -266,7 +312,10 @@ func (w *TimeWidget) GetRenderData() WidgetRenderData {
 	if w.Location == nil {
 		w.Location = time.UTC
 	}
-	value, _ := w.form.getNestedField(w.Id)
+	value, err := w.form.getNestedField(w.Id)
+	if err != nil {
+		panic(fmt.Sprintf("Could not find field %q in data", w.Id))
+	}
 	timeValue := value.Interface().(time.Time).In(w.Location).Format(RFC3339Short)
 	return WidgetRenderData{
 		WidgetBase: w.WidgetBase,

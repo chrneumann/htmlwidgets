@@ -248,3 +248,25 @@ func TestTimeWidget(t *testing.T) {
 		Template:    "time",
 	})
 }
+
+type listWidgetData struct {
+	Fields []string
+}
+
+func TestListWidget(t *testing.T) {
+	data := &listWidgetData{[]string{"Foo", "Bar"}}
+	expectedData := &listWidgetData{[]string{"FooFoo", "BarBar"}}
+	form := NewForm(data)
+	widget := &ListWidget{InnerWidget: &TextWidget{}}
+	form.AddWidget(widget, "Fields", "", "")
+	urlValues := url.Values{
+		"Fields.0": []string{"FooFoo"},
+		"Fields.1": []string{"BarBar"},
+	}
+	if !form.Fill(urlValues) {
+		t.Fatalf("Fill returned false")
+	}
+	if !reflect.DeepEqual(data, expectedData) {
+		t.Errorf("Filled data is %v, expected %v.", data, expectedData)
+	}
+}
