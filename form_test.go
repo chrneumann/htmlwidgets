@@ -251,3 +251,20 @@ func TestFill(t *testing.T) {
 		t.Errorf("form.Fill(..) returns true, should be false.")
 	}
 }
+
+func TestInitData(t *testing.T) {
+	data := make(map[string]interface{})
+	form := NewForm(data)
+	form.AddWidget(new(BoolWidget), "Field", "Alive", "Still alive?")
+	vals := url.Values{
+		"Field": []string{"true"},
+	}
+	expected := map[string]interface{}{"Field": true}
+	if !form.Fill(vals) {
+		t.Errorf("form.Fill(..) returns false, should be true. Errors: %v",
+			form.RenderData().Errors)
+	}
+	if !reflect.DeepEqual(expected, data) {
+		t.Errorf("Filled data should be %v, is %v", expected, data)
+	}
+}

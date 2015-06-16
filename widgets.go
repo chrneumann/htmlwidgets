@@ -57,6 +57,11 @@ type WidgetBase struct {
 	form    *Form
 }
 
+// Widget returns the corresponding widget.
+func (w WidgetBase) Widget() Widget {
+	return w.form.WidgetById(w.Id)
+}
+
 func (w WidgetBase) GetRenderData() WidgetRenderData {
 	value, err := w.form.getNestedField(w.Id)
 	if err != nil {
@@ -255,6 +260,7 @@ func (w *FileWidget) Fill(values url.Values) bool {
 type ListWidget struct {
 	WidgetBase
 	InnerWidget Widget
+	AddLabel    string
 }
 
 func (w *ListWidget) GetRenderData() WidgetRenderData {
@@ -275,16 +281,26 @@ func (w *ListWidget) GetRenderData() WidgetRenderData {
 	return WidgetRenderData{
 		WidgetBase: w.WidgetBase,
 		Template:   "list",
-		Data:       innerRenderData}
+		Data: map[string]interface{}{
+			"Fields":   innerRenderData,
+			"AddLabel": w.AddLabel,
+		},
+	}
 }
 
 func (w *ListWidget) Fill(values url.Values) bool {
 	valid := true
 	i := 0
+	addTo := values.Get("htmlwidgets-action--add-to-list") == w.Id
 	for {
 		id := fmt.Sprintf("%v.%d", w.Id, i)
 		if _, ok := values[id]; !ok {
-			break
+			if !addTo {
+				break
+			} else {
+				addTo = false
+				valid = false
+			}
 		}
 		*(w.InnerWidget.Base()) = WidgetBase{
 			Id:   id,

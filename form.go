@@ -38,11 +38,17 @@ type RenderData struct {
 
 // Form represents an html form.
 type Form struct {
-	Widgets []Widget
-	data    interface{}
-	errors  map[string][]string
+	Widgets   []Widget
+	widgetMap map[string]Widget
+	data      interface{}
+	errors    map[string][]string
 	// Action defines the action parameter of the HTML form
 	Action string
+}
+
+// WidgetById returns the widget with the given id.
+func (f Form) WidgetById(id string) Widget {
+	return f.widgetMap[id]
 }
 
 // AddWidget adds a new widget to the form and sets the given attributes.
@@ -51,6 +57,7 @@ type Form struct {
 func (f *Form) AddWidget(widget Widget, id, label, description string) Widget {
 	*(widget.Base()) = WidgetBase{id, label, description, nil, nil, f}
 	f.Widgets = append(f.Widgets, widget)
+	f.widgetMap[id] = widget
 	return widget
 }
 
@@ -65,8 +72,11 @@ func NewForm(data interface{}) *Form {
 		panic("NewForm(data, widgets) expects data to" +
 			" be a map or a pointer to a struct.")
 	}
-	form := Form{data: data, Widgets: make([]Widget, 0),
-		errors: make(map[string][]string, 0)}
+	form := Form{
+		data:      data,
+		Widgets:   make([]Widget, 0),
+		widgetMap: make(map[string]Widget),
+		errors:    make(map[string][]string, 0)}
 	return &form
 }
 
@@ -108,6 +118,8 @@ func (f Form) getNestedField(field string) (reflect.Value, error) {
 func (f *Form) findNestedField(field string, setValue interface{}) (reflect.Value, error) {
 	parts := strings.Split(field, ".")
 	value := reflect.ValueOf(f.data)
+	var lastMapValue reflect.Value
+	var lastMapIndex reflect.Value
 	for len(parts) != 0 {
 		setIt := len(parts) == 1 && setValue != nil
 		part := parts[0]
@@ -122,12 +134,23 @@ func (f *Form) findNestedField(field string, setValue interface{}) (reflect.Valu
 				value.SetMapIndex(reflect.ValueOf(part), reflect.ValueOf(setValue))
 				return reflect.Value{}, nil
 			}
+			lastMapValue = value
+			lastMapIndex = reflect.ValueOf(part)
 			value = value.MapIndex(reflect.ValueOf(part))
 		case reflect.Slice:
 			index, err := strconv.Atoi(part)
 			if err != nil {
 				return reflect.Value{},
 					fmt.Errorf("Form: Expected index, got %q in field id %q", part, index)
+			}
+			if value.Len() == index {
+				sliceSetvalue := reflect.Append(value, reflect.New(value.Type().Elem()).Elem())
+				if value.CanSet() {
+					value.Set(sliceSetvalue)
+				} else {
+					lastMapValue.SetMapIndex(lastMapIndex, sliceSetvalue)
+					value = lastMapValue.MapIndex(lastMapIndex).Elem()
+				}
 			}
 			value = value.Index(index)
 		default:
@@ -163,7 +186,8 @@ func (f *Form) findNestedField(field string, setValue interface{}) (reflect.Valu
 //
 // Values that don't match a widget will be ignored.
 //
-// Returns true iff the form validates.
+// Returns true iff the form validates and there are none of the known
+// "htmlwidgets-action--*" parameters present.
 func (f *Form) Fill(values url.Values) bool {
 	ret := true
 	for _, widget := range f.Widgets {
