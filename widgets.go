@@ -93,7 +93,7 @@ func (w *TextWidget) GetRenderData() WidgetRenderData {
 func (w *TextWidget) Fill(values url.Values) bool {
 	w.Errors = nil
 	value := values.Get(w.Id)
-	w.form.findNestedField(w.Id, value)
+	w.form.findNestedField(w.Id, value, false)
 	validated := true
 	if len(value) < w.MinLength {
 		validated = false
@@ -138,7 +138,7 @@ func (w *TextAreaWidget) GetRenderData() WidgetRenderData {
 func (w *TextAreaWidget) Fill(values url.Values) bool {
 	w.Errors = nil
 	value := values.Get(w.Id)
-	w.form.findNestedField(w.Id, value)
+	w.form.findNestedField(w.Id, value, false)
 	validated := true
 	if len(value) < w.MinLength {
 		validated = false
@@ -161,10 +161,10 @@ func (w *BoolWidget) GetRenderData() WidgetRenderData {
 func (w *BoolWidget) Fill(values url.Values) bool {
 	if len(values[w.Id]) != 0 {
 		if v, err := strconv.ParseBool(values[w.Id][0]); err == nil {
-			w.form.findNestedField(w.Id, v)
+			w.form.findNestedField(w.Id, v, false)
 		}
 	} else {
-		w.form.findNestedField(w.Id, false)
+		w.form.findNestedField(w.Id, false, false)
 	}
 	return true
 }
@@ -182,7 +182,7 @@ func (w *IntegerWidget) Fill(values url.Values) bool {
 	if err != nil {
 		return false
 	}
-	w.form.findNestedField(w.Id, int(v))
+	w.form.findNestedField(w.Id, int(v), false)
 	return true
 }
 
@@ -210,7 +210,7 @@ func (w *SelectWidget) Fill(values url.Values) bool {
 			}
 		}
 	}
-	w.form.findNestedField(w.Id, value)
+	w.form.findNestedField(w.Id, value, false)
 	return true
 }
 
@@ -233,7 +233,7 @@ func (w *HiddenWidget) GetRenderData() WidgetRenderData {
 
 func (w *HiddenWidget) Fill(values url.Values) bool {
 	value := values.Get(w.Id)
-	w.form.findNestedField(w.Id, value)
+	w.form.findNestedField(w.Id, value, false)
 	return true
 }
 
@@ -259,8 +259,8 @@ func (w *FileWidget) Fill(values url.Values) bool {
 
 type ListWidget struct {
 	WidgetBase
-	InnerWidget Widget
-	AddLabel    string
+	InnerWidget           Widget
+	AddLabel, RemoveLabel string
 }
 
 func (w *ListWidget) GetRenderData() WidgetRenderData {
@@ -282,21 +282,45 @@ func (w *ListWidget) GetRenderData() WidgetRenderData {
 		WidgetBase: w.WidgetBase,
 		Template:   "list",
 		Data: map[string]interface{}{
-			"Fields":   innerRenderData,
-			"AddLabel": w.AddLabel,
+			"Fields":      innerRenderData,
+			"AddLabel":    w.AddLabel,
+			"RemoveLabel": w.RemoveLabel,
 		},
 	}
 }
 
 func (w *ListWidget) Fill(values url.Values) bool {
 	valid := true
-	i := 0
 	addTo := values.Get("htmlwidgets-action--add-to-list") == w.Id
-	for {
+	var remove []string
+	var maxIndex int
+
+	// Find highest index
+	re := regexp.MustCompile("^" + w.Id + `\.(\d)$`)
+	for key, _ := range values {
+		matches := re.FindStringSubmatch(key)
+		if len(matches) == 2 {
+			if idx, err := strconv.Atoi(matches[1]); err == nil &&
+				idx > maxIndex {
+				maxIndex = idx
+			}
+		}
+	}
+	if addTo {
+		maxIndex += 1
+	}
+
+	// Fill values into inner fields
+	for i := 0; i <= maxIndex; i++ {
 		id := fmt.Sprintf("%v.%d", w.Id, i)
+		if values.Get("htmlwidgets-action--remove-from-list") == id {
+			remove = append(remove, id)
+			valid = false
+			continue
+		}
 		if _, ok := values[id]; !ok {
 			if !addTo {
-				break
+				remove = append(remove, id)
 			} else {
 				addTo = false
 				valid = false
@@ -309,7 +333,21 @@ func (w *ListWidget) Fill(values url.Values) bool {
 		if !w.InnerWidget.Fill(values) {
 			valid = false
 		}
-		i++
+	}
+
+	// Remove fields as requested by the remove action
+	for _, id := range remove {
+		w.form.findNestedField(id, nil, true)
+	}
+
+	// Remove fields after the maximum index
+	field, err := w.form.getNestedField(w.Id)
+	if err != nil {
+		panic(err)
+	}
+	for i := maxIndex + 1; i < field.Len(); i++ {
+		id := fmt.Sprintf("%v.%d", w.Id, i)
+		w.form.findNestedField(id, nil, true)
 	}
 	return valid
 }
@@ -354,6 +392,6 @@ func (w *TimeWidget) Fill(values url.Values) bool {
 	if err != nil {
 		v = time.Time{}
 	}
-	w.form.findNestedField(w.Id, v)
+	w.form.findNestedField(w.Id, v, false)
 	return true
 }

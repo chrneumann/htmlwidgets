@@ -109,19 +109,23 @@ func (f *Form) AddError(widgetId string, error string) {
 
 // getNestedField searches for the given nested field in the given data
 func (f Form) getNestedField(field string) (reflect.Value, error) {
-	return f.findNestedField(field, nil)
+	return f.findNestedField(field, nil, false)
 }
 
 // findNestedField searches for the given field in the form data.
 //
 // If setValue is given, it will be set to the field.
-func (f *Form) findNestedField(field string, setValue interface{}) (reflect.Value, error) {
+// If remove is given, the value will be removed from its parent slice
+// or map.
+func (f *Form) findNestedField(field string, setValue interface{}, remove bool) (
+	reflect.Value, error) {
 	parts := strings.Split(field, ".")
 	value := reflect.ValueOf(f.data)
 	var lastMapValue reflect.Value
 	var lastMapIndex reflect.Value
 	for len(parts) != 0 {
 		setIt := len(parts) == 1 && setValue != nil
+		removeIt := len(parts) == 1 && remove
 		part := parts[0]
 		switch value.Type().Kind() {
 		case reflect.Ptr, reflect.Interface:
@@ -134,6 +138,10 @@ func (f *Form) findNestedField(field string, setValue interface{}) (reflect.Valu
 				value.SetMapIndex(reflect.ValueOf(part), reflect.ValueOf(setValue))
 				return reflect.Value{}, nil
 			}
+			if removeIt {
+				value.SetMapIndex(reflect.ValueOf(part), reflect.Value{})
+				return reflect.Value{}, nil
+			}
 			lastMapValue = value
 			lastMapIndex = reflect.ValueOf(part)
 			value = value.MapIndex(reflect.ValueOf(part))
@@ -142,6 +150,18 @@ func (f *Form) findNestedField(field string, setValue interface{}) (reflect.Valu
 			if err != nil {
 				return reflect.Value{},
 					fmt.Errorf("Form: Expected index, got %q in field id %q", part, index)
+			}
+			if removeIt {
+				sliceSetvalue := reflect.AppendSlice(
+					value.Slice(0, index),
+					value.Slice(index+1, value.Len()))
+				if value.CanSet() {
+					value.Set(sliceSetvalue)
+				} else {
+					lastMapValue.SetMapIndex(lastMapIndex, sliceSetvalue)
+					value = lastMapValue.MapIndex(lastMapIndex).Elem()
+				}
+				return reflect.Value{}, nil
 			}
 			if value.Len() == index {
 				sliceSetvalue := reflect.Append(value, reflect.New(value.Type().Elem()).Elem())

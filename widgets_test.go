@@ -270,6 +270,22 @@ func TestListWidget(t *testing.T) {
 		t.Fatalf("Fill returned false. Errors: %v", form.RenderData().Errors)
 	}
 	if !reflect.DeepEqual(data, expectedData) {
-		t.Errorf("Filled data is %v, expected %v.", data, expectedData)
+		t.Fatalf("Filled data is %v, expected %v.", data, expectedData)
+	}
+	urlValues["htmlwidgets-action--remove-from-list"] = []string{"Fields.1"}
+	if form.Fill(urlValues) {
+		t.Fatalf("Fill after remove returned true")
+	}
+	delete(urlValues, "htmlwidgets-action--remove-from-list")
+	delete(urlValues, "Fields.2")
+	expectedData = map[string]interface{}{
+		"Fields": []string{"FooFoo", "BarBar"}}
+	data["Fields"] = []string{"Foo", "Bar", "Cruz"}
+	if !form.Fill(urlValues) {
+		t.Fatalf("Fill after fill after remove returned false")
+	}
+	if !reflect.DeepEqual(data, expectedData) {
+		t.Fatalf("Filled data after fill after remove is %v, expected %v.",
+			data, expectedData)
 	}
 }
