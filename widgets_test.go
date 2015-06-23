@@ -249,24 +249,43 @@ func TestTimeWidget(t *testing.T) {
 	})
 }
 
-type listWidgetData struct {
-	Fields []string
-}
-
 func TestListWidget(t *testing.T) {
-	data := &listWidgetData{[]string{"Foo", "Bar"}}
-	expectedData := &listWidgetData{[]string{"FooFoo", "BarBar"}}
+	data := map[string]interface{}{"Fields": []string{"Foo", "Bar"}}
+	expectedData := map[string]interface{}{
+		"Fields": []string{"FooFoo", "BarBar", "CruzCruz"}}
 	form := NewForm(data)
 	widget := &ListWidget{InnerWidget: &TextWidget{}}
 	form.AddWidget(widget, "Fields", "", "")
 	urlValues := url.Values{
-		"Fields.0": []string{"FooFoo"},
-		"Fields.1": []string{"BarBar"},
+		"Fields.0":                        []string{"FooFoo"},
+		"Fields.1":                        []string{"BarBar"},
+		"htmlwidgets-action--add-to-list": []string{"Fields"},
 	}
+	if form.Fill(urlValues) {
+		t.Fatalf("Fill returned true")
+	}
+	delete(urlValues, "htmlwidgets-action--add-to-list")
+	urlValues["Fields.2"] = []string{"CruzCruz"}
 	if !form.Fill(urlValues) {
-		t.Fatalf("Fill returned false")
+		t.Fatalf("Fill returned false. Errors: %v", form.RenderData().Errors)
 	}
 	if !reflect.DeepEqual(data, expectedData) {
-		t.Errorf("Filled data is %v, expected %v.", data, expectedData)
+		t.Fatalf("Filled data is %v, expected %v.", data, expectedData)
+	}
+	urlValues["htmlwidgets-action--remove-from-list"] = []string{"Fields.1"}
+	if form.Fill(urlValues) {
+		t.Fatalf("Fill after remove returned true")
+	}
+	delete(urlValues, "htmlwidgets-action--remove-from-list")
+	delete(urlValues, "Fields.2")
+	expectedData = map[string]interface{}{
+		"Fields": []string{"FooFoo", "BarBar"}}
+	data["Fields"] = []string{"Foo", "Bar", "Cruz"}
+	if !form.Fill(urlValues) {
+		t.Fatalf("Fill after fill after remove returned false")
+	}
+	if !reflect.DeepEqual(data, expectedData) {
+		t.Fatalf("Filled data after fill after remove is %v, expected %v.",
+			data, expectedData)
 	}
 }

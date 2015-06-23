@@ -38,19 +38,33 @@ type RenderData struct {
 
 // Form represents an html form.
 type Form struct {
-	Widgets []Widget
-	data    interface{}
-	errors  map[string][]string
+	Widgets   []Widget
+	widgetMap map[string]Widget
+	data      interface{}
+	errors    map[string][]string
 	// Action defines the action parameter of the HTML form
 	Action string
+}
+
+// WidgetById returns the widget with the given id.
+func (f Form) WidgetById(id string) Widget {
+	return f.widgetMap[id]
 }
 
 // AddWidget adds a new widget to the form and sets the given attributes.
 //
 // It returns the added widget
 func (f *Form) AddWidget(widget Widget, id, label, description string) Widget {
-	*(widget.Base()) = WidgetBase{id, label, description, nil, nil, f}
+	base := widget.Base()
+	if base == nil {
+		*base = WidgetBase{}
+	}
+	base.Id = id
+	base.Label = label
+	base.Description = description
+	base.form = f
 	f.Widgets = append(f.Widgets, widget)
+	f.widgetMap[id] = widget
 	return widget
 }
 
@@ -65,8 +79,11 @@ func NewForm(data interface{}) *Form {
 		panic("NewForm(data, widgets) expects data to" +
 			" be a map or a pointer to a struct.")
 	}
-	form := Form{data: data, Widgets: make([]Widget, 0),
-		errors: make(map[string][]string, 0)}
+	form := Form{
+		data:      data,
+		Widgets:   make([]Widget, 0),
+		widgetMap: make(map[string]Widget),
+		errors:    make(map[string][]string, 0)}
 	return &form
 }
 
@@ -99,17 +116,23 @@ func (f *Form) AddError(widgetId string, error string) {
 
 // getNestedField searches for the given nested field in the given data
 func (f Form) getNestedField(field string) (reflect.Value, error) {
-	return f.findNestedField(field, nil)
+	return f.findNestedField(field, nil, false)
 }
 
 // findNestedField searches for the given field in the form data.
 //
 // If setValue is given, it will be set to the field.
-func (f *Form) findNestedField(field string, setValue interface{}) (reflect.Value, error) {
+// If remove is given, the value will be removed from its parent slice
+// or map.
+func (f *Form) findNestedField(field string, setValue interface{}, remove bool) (
+	reflect.Value, error) {
 	parts := strings.Split(field, ".")
 	value := reflect.ValueOf(f.data)
+	var lastMapValue reflect.Value
+	var lastMapIndex reflect.Value
 	for len(parts) != 0 {
 		setIt := len(parts) == 1 && setValue != nil
+		removeIt := len(parts) == 1 && remove
 		part := parts[0]
 		switch value.Type().Kind() {
 		case reflect.Ptr, reflect.Interface:
@@ -122,12 +145,39 @@ func (f *Form) findNestedField(field string, setValue interface{}) (reflect.Valu
 				value.SetMapIndex(reflect.ValueOf(part), reflect.ValueOf(setValue))
 				return reflect.Value{}, nil
 			}
+			if removeIt {
+				value.SetMapIndex(reflect.ValueOf(part), reflect.Value{})
+				return reflect.Value{}, nil
+			}
+			lastMapValue = value
+			lastMapIndex = reflect.ValueOf(part)
 			value = value.MapIndex(reflect.ValueOf(part))
 		case reflect.Slice:
 			index, err := strconv.Atoi(part)
 			if err != nil {
 				return reflect.Value{},
 					fmt.Errorf("Form: Expected index, got %q in field id %q", part, index)
+			}
+			if removeIt {
+				sliceSetvalue := reflect.AppendSlice(
+					value.Slice(0, index),
+					value.Slice(index+1, value.Len()))
+				if value.CanSet() {
+					value.Set(sliceSetvalue)
+				} else {
+					lastMapValue.SetMapIndex(lastMapIndex, sliceSetvalue)
+					value = lastMapValue.MapIndex(lastMapIndex).Elem()
+				}
+				return reflect.Value{}, nil
+			}
+			if value.Len() == index {
+				sliceSetvalue := reflect.Append(value, reflect.New(value.Type().Elem()).Elem())
+				if value.CanSet() {
+					value.Set(sliceSetvalue)
+				} else {
+					lastMapValue.SetMapIndex(lastMapIndex, sliceSetvalue)
+					value = lastMapValue.MapIndex(lastMapIndex).Elem()
+				}
 			}
 			value = value.Index(index)
 		default:
@@ -163,7 +213,8 @@ func (f *Form) findNestedField(field string, setValue interface{}) (reflect.Valu
 //
 // Values that don't match a widget will be ignored.
 //
-// Returns true iff the form validates.
+// Returns true iff the form validates and there are none of the known
+// "htmlwidgets-action--*" parameters present.
 func (f *Form) Fill(values url.Values) bool {
 	ret := true
 	for _, widget := range f.Widgets {
