@@ -55,7 +55,14 @@ func (f Form) WidgetById(id string) Widget {
 //
 // It returns the added widget
 func (f *Form) AddWidget(widget Widget, id, label, description string) Widget {
-	*(widget.Base()) = WidgetBase{id, label, description, nil, nil, f}
+	base := widget.Base()
+	if base == nil {
+		*base = WidgetBase{}
+	}
+	base.Id = id
+	base.Label = label
+	base.Description = description
+	base.form = f
 	f.Widgets = append(f.Widgets, widget)
 	f.widgetMap[id] = widget
 	return widget

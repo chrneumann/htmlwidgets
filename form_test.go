@@ -124,6 +124,18 @@ func TestAddError(t *testing.T) {
 	}
 }
 
+func TestAddWidget(t *testing.T) {
+	data := TestAppData{}
+	form := NewForm(&data)
+	widget := new(TextWidget)
+	widget.Base().Classes = []string{"test"}
+	form.AddWidget(widget, "Name", "", "")
+	renderData := form.RenderData()
+	if renderData.Widgets[0].Base().Classes[0] != "test" {
+		t.Errorf(`AddWidget removed classes`)
+	}
+}
+
 /*
 
 func TestMapRender(t *testing.T) {
